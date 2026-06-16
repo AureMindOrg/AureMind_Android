@@ -14,34 +14,27 @@ class TasksScreen extends StatefulWidget {
 class _TasksScreenState extends State<TasksScreen> {
   Set<int> _selectedIds = {};
 
-  void _refreshTasks() {
-    setState(() { _selectedIds.clear(); });
-  }
+  void _refreshTasks() => setState(() { _selectedIds.clear(); });
 
   void _deleteSelected() async {
-    for (int id in _selectedIds) {
-      await NotificationHelper.cancelNotification(id); 
-    }
+    for (int id in _selectedIds) await NotificationHelper.cancelNotification(id); 
     await DatabaseHelper.deleteTasks(_selectedIds.toList());
     _refreshTasks();
   }
 
   void _toggleSelection(int id) {
-    setState(() {
-      if (_selectedIds.contains(id)) {
-        _selectedIds.remove(id);
-      } else {
-        _selectedIds.add(id);
-      }
-    });
+    setState(() { _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id); });
   }
 
   void _toggleTaskCompletion(Map<String, dynamic> task, bool? isCompleted) async {
     await DatabaseHelper.updateTaskStatus(task['id'], isCompleted == true ? 1 : 0);
-    if (isCompleted == true) {
-      await NotificationHelper.cancelNotification(task['id']); 
-    }
+    if (isCompleted == true) await NotificationHelper.cancelNotification(task['id']); 
     _refreshTasks();
+  }
+
+  void _editTask(Map<String, dynamic> task) async {
+    final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => TaskFormScreen(existingTask: task)));
+    if (result == true) _refreshTasks();
   }
 
   Widget _buildTaskTile(Map<String, dynamic> task, bool isCompletedTask) {
@@ -51,31 +44,29 @@ class _TasksScreenState extends State<TasksScreen> {
 
     return Card(
       elevation: 2,
-      color: isSelected ? Colors.blue.shade50 : Colors.white,
+      // By using null, the Card perfectly absorbs Dark Mode / Light Mode colors automatically
+      color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: isSelected ? Colors.blue : Colors.transparent, width: 2),
+        side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
       ),
       child: ListTile(
         onLongPress: () => _toggleSelection(task['id']),
         onTap: () {
-          if (_selectedIds.isNotEmpty) _toggleSelection(task['id']);
+          if (_selectedIds.isNotEmpty) {
+            _toggleSelection(task['id']);
+          } else {
+            _editTask(task); // <-- OPENS EDITOR
+          }
         },
         leading: Checkbox(
           value: task['is_completed'] == 1,
-          activeColor: Colors.green,
-          onChanged: (val) {
-            if (_selectedIds.isEmpty) _toggleTaskCompletion(task, val);
-          },
+          onChanged: (val) { if (_selectedIds.isEmpty) _toggleTaskCompletion(task, val); },
         ),
         title: Text(
           task['title'], 
-          style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            decoration: isCompletedTask ? TextDecoration.lineThrough : null,
-            color: isCompletedTask ? Colors.grey : Colors.black
-          )
+          style: TextStyle(fontWeight: FontWeight.bold, decoration: isCompletedTask ? TextDecoration.lineThrough : null, color: isCompletedTask ? Colors.grey : null)
         ),
         subtitle: Text("Due: $formattedDate", style: const TextStyle(color: Colors.blueGrey)),
       ),
@@ -87,12 +78,8 @@ class _TasksScreenState extends State<TasksScreen> {
     return Scaffold(
       drawer: const AppDrawer(currentRoute: 'Tasks'),
       appBar: AppBar(
-        title: Text(_selectedIds.isEmpty ? 'Tasks' : '${_selectedIds.length} Selected', 
-          style: const TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          if (_selectedIds.isNotEmpty)
-            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)
-        ],
+        title: Text(_selectedIds.isEmpty ? 'Tasks' : '${_selectedIds.length} Selected', style: const TextStyle(fontWeight: FontWeight.bold)),
+        actions: [if (_selectedIds.isNotEmpty) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)],
       ),
       body: SafeArea(
         bottom: true,
@@ -105,21 +92,17 @@ class _TasksScreenState extends State<TasksScreen> {
             final pendingTasks = tasks.where((t) => t['is_completed'] == 0).toList();
             final completedTasks = tasks.where((t) => t['is_completed'] == 1).toList();
 
-            if (tasks.isEmpty) {
-              return const Center(child: Text("No tasks found. Create one to get started! 🥳"));
-            }
+            if (tasks.isEmpty) return const Center(child: Text("No tasks found."));
 
             return ListView(
-              padding: const EdgeInsets.only(top: 8, bottom: 85), // Fix for bottom overlap
+              padding: const EdgeInsets.only(top: 8, bottom: 85),
               children: [
                 ...pendingTasks.map((t) => _buildTaskTile(t, false)),
-                
                 if (completedTasks.isNotEmpty)
                   Theme(
                     data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       title: Text("Completed (${completedTasks.length})", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                      initiallyExpanded: false,
                       children: completedTasks.map((t) => _buildTaskTile(t, true)).toList(),
                     ),
                   )
@@ -130,12 +113,11 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       floatingActionButton: _selectedIds.isEmpty ? FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => const TaskFormScreen()));
-          _refreshTasks(); 
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const TaskFormScreen()));
+          if (result == true) _refreshTasks(); 
         },
-        backgroundColor: const Color(0xFF3B82F6),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ) : null,
     );
   }
-}
+} 

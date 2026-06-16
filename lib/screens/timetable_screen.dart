@@ -97,7 +97,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
             if (timetables.isEmpty) return const Center(child: Text("No timetables found."));
 
             return ListView.builder(
-              padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 85), // Fix for bottom overlap
+              padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 85),
               itemCount: timetables.length,
               itemBuilder: (context, index) {
                 final tt = timetables[index];
@@ -106,7 +106,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 String end = tt['end_date'].toString().split('T')[0];
 
                 return Card(
-                  color: isSelected ? Colors.teal.shade50 : Colors.white,
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null, // Fix applied here
                   shape: RoundedRectangleBorder(
                     side: BorderSide(color: isSelected ? Colors.teal : Colors.transparent, width: 2),
                     borderRadius: BorderRadius.circular(8),

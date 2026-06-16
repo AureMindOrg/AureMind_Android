@@ -1,3 +1,4 @@
+import 'dart:collection'; 
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/database_helper.dart';
@@ -16,7 +17,11 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  Map<DateTime, List<Map<String, dynamic>>> _itemsByDay = {};
+  
+  LinkedHashMap<DateTime, List<Map<String, dynamic>>> _itemsByDay = LinkedHashMap(
+    equals: (a, b) => isSameDay(a, b),
+    hashCode: (DateTime key) => key.day * 1000000 + key.month * 10000 + key.year,
+  );
 
   @override
   void initState() {
@@ -30,55 +35,70 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final events = await DatabaseHelper.fetchAllEvents();
     final timetables = await DatabaseHelper.fetchTimetables();
     
-    Map<DateTime, List<Map<String, dynamic>>> grouped = {};
+    final grouped = LinkedHashMap<DateTime, List<Map<String, dynamic>>>(
+      equals: (a, b) => isSameDay(a, b),
+      hashCode: (DateTime key) => key.day * 1000000 + key.month * 10000 + key.year,
+    );
 
-    // 1. Group Tasks
+    // 👇 FIXED: Clone the Task into a mutable map before modifying it 👇
     for (var task in tasks) {
-      DateTime dt = DateTime.parse(task['due_date']);
-      DateTime normalizedDate = DateTime(dt.year, dt.month, dt.day); 
-      if (grouped[normalizedDate] == null) grouped[normalizedDate] = [];
-      task['type'] = 'task'; 
-      grouped[normalizedDate]!.add(task);
+      try {
+        DateTime dt = DateTime.parse(task['due_date'].toString());
+        DateTime normalized = DateTime.utc(dt.year, dt.month, dt.day); 
+        Map<String, dynamic> mutableTask = Map<String, dynamic>.from(task); // Clone it!
+        mutableTask['type'] = 'task'; 
+        grouped.putIfAbsent(normalized, () => []).add(mutableTask);
+      } catch (e) {
+        debugPrint("Task Error: $e");
+      }
     }
     
-    // 2. Group Events
+    // 👇 FIXED: Clone the Event into a mutable map before modifying it 👇
     for (var event in events) {
-      DateTime dt = DateTime.parse(event['event_date']);
-      DateTime normalizedDate = DateTime(dt.year, dt.month, dt.day); 
-      if (grouped[normalizedDate] == null) grouped[normalizedDate] = [];
-      event['type'] = 'event'; 
-      grouped[normalizedDate]!.add(event);
-    }
-
-    // 3. Inject Timetable Classes
-    for (var tt in timetables) {
-      if (tt['start_date'] == null) continue; // Skip old corrupted data if any
-      DateTime start = DateTime.parse(tt['start_date']);
-      DateTime end = DateTime.parse(tt['end_date']);
-      final entries = await DatabaseHelper.fetchTimetableEntries(tt['id']);
-      
-      // Loop through every day between the Timetable Start and End Date
-      for (DateTime d = start; d.isBefore(end.add(const Duration(days: 1))); d = d.add(const Duration(days: 1))) {
-        DateTime normalized = DateTime(d.year, d.month, d.day);
-        int weekday = d.weekday; // 1 = Monday, 7 = Sunday
-        
-        var classesForThisDay = entries.where((e) => e['day_of_week'] == weekday).toList();
-        for (var c in classesForThisDay) {
-          if (grouped[normalized] == null) grouped[normalized] = [];
-          grouped[normalized]!.add({
-            'type': 'class',
-            'title': c['subject'],
-            'time': '${c['start_time']} - ${c['end_time']}'
-          });
-        }
+      try {
+        DateTime dt = DateTime.parse(event['event_date'].toString());
+        DateTime normalized = DateTime.utc(dt.year, dt.month, dt.day); 
+        Map<String, dynamic> mutableEvent = Map<String, dynamic>.from(event); // Clone it!
+        mutableEvent['type'] = 'event'; 
+        grouped.putIfAbsent(normalized, () => []).add(mutableEvent);
+      } catch (e) {
+        debugPrint("Event Error: $e");
       }
     }
 
-    setState(() { _itemsByDay = grouped; });
+    // Inject Timetable Classes
+    for (var tt in timetables) {
+      try {
+        if (tt['start_date'] == null || tt['start_date'].toString() == 'null') continue; 
+        DateTime start = DateTime.parse(tt['start_date'].toString());
+        DateTime end = DateTime.parse(tt['end_date'].toString());
+        final entries = await DatabaseHelper.fetchTimetableEntries(tt['id']);
+        
+        for (DateTime d = start; d.isBefore(end.add(const Duration(days: 1))); d = d.add(const Duration(days: 1))) {
+          DateTime normalized = DateTime.utc(d.year, d.month, d.day);
+          int weekday = d.weekday; 
+          
+          var classesForThisDay = entries.where((e) => e['day_of_week'] == weekday).toList();
+          for (var c in classesForThisDay) {
+            grouped.putIfAbsent(normalized, () => []).add({
+              'type': 'class',
+              'title': c['subject'],
+              'time': '${c['start_time']} - ${c['end_time']}'
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Timetable Error: $e");
+      }
+    }
+
+    if (mounted) {
+      setState(() { _itemsByDay = grouped; });
+    }
   }
 
   List<Map<String, dynamic>> _getEventsForDay(DateTime day) {
-    DateTime normalizedDate = DateTime(day.year, day.month, day.day);
+    DateTime normalizedDate = DateTime.utc(day.year, day.month, day.day);
     return _itemsByDay[normalizedDate] ?? [];
   }
 
@@ -119,31 +139,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       drawer: const AppDrawer(currentRoute: 'Calendar'),
       appBar: AppBar(title: const Text('Calendar', style: TextStyle(fontWeight: FontWeight.bold))),
-      body: Column(
-        children: [
-          TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1), lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay, selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            eventLoader: _getEventsForDay,
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() { _selectedDay = selectedDay; _focusedDay = focusedDay; });
-              Navigator.push(context, MaterialPageRoute(builder: (context) => DateDetailScreen(initialDate: selectedDay, dayItems: _getEventsForDay(selectedDay))))
-                .then((_) => _loadCalendarData()); 
-            },
-            headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-              selectedDecoration: BoxDecoration(color: Color(0xFF3B82F6), shape: BoxShape.circle),
-              markerDecoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+      body: SafeArea(
+        bottom: true,
+        child: Column(
+          children: [
+            TableCalendar<Map<String, dynamic>>(
+              rowHeight: 80, // BIG CALENDAR
+              firstDay: DateTime.utc(2020, 1, 1), 
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay, 
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              eventLoader: _getEventsForDay,
+              onDaySelected: (selectedDay, focusedDay) {
+                setState(() { _selectedDay = selectedDay; _focusedDay = focusedDay; });
+                Navigator.push(context, MaterialPageRoute(builder: (context) => DateDetailScreen(initialDate: selectedDay, dayItems: _getEventsForDay(selectedDay))))
+                  .then((_) => _loadCalendarData()); 
+              },
+              headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+              calendarBuilders: CalendarBuilders<Map<String, dynamic>>(
+                markerBuilder: (context, date, events) {
+                  if (events.isEmpty) return const SizedBox();
+                  return Positioned(
+                    bottom: 2,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: events.take(2).map((e) {
+                        Color c = e['type'] == 'task' ? Colors.blue : e['type'] == 'event' ? Colors.orange : Colors.teal;
+                        return Container(
+                          margin: const EdgeInsets.only(top: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(4)),
+                          constraints: const BoxConstraints(maxWidth: 45),
+                          child: Text(
+                            e['title'].toString(),
+                            style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  );
+                },
+              ),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), shape: BoxShape.circle),
+                selectedDecoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, shape: BoxShape.circle),
+              ),
             ),
-          ),
-          const Expanded(child: Center(child: Text("Tap on a date to see its schedule.", style: TextStyle(color: Colors.grey))))
-        ],
+            const Expanded(child: Center(child: Text("Tap on a date to see its schedule.", style: TextStyle(color: Colors.grey))))
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddOptions,
-        backgroundColor: const Color(0xFF3B82F6),
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        child: Icon(Icons.add, color: Theme.of(context).colorScheme.onPrimaryContainer),
       ),
     );
   }

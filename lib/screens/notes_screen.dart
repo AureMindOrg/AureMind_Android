@@ -52,7 +52,7 @@ class _NotesScreenState extends State<NotesScreen> {
             final notes = snapshot.data!;
 
             return GridView.builder(
-              padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 85), // Fix for bottom overlap
+              padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 85),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 12,
@@ -77,10 +77,10 @@ class _NotesScreenState extends State<NotesScreen> {
                   },
                   child: Card(
                     elevation: 3,
-                    color: isSelected ? Colors.blue.shade50 : Colors.white,
+                    color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null, // Fix applied here
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: isSelected ? Colors.blue : Colors.transparent, width: 2),
+                      side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -98,7 +98,7 @@ class _NotesScreenState extends State<NotesScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (isSelected) const Icon(Icons.check_circle, color: Colors.blue, size: 20)
+                              if (isSelected) Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20)
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -107,7 +107,7 @@ class _NotesScreenState extends State<NotesScreen> {
                               padding: const EdgeInsets.only(bottom: 4.0),
                               child: Text(
                                 note['decrypted_content'] ?? '',
-                                style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.3),
+                                style: const TextStyle(fontSize: 14, height: 1.3),
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -138,8 +138,7 @@ class _NotesScreenState extends State<NotesScreen> {
           await Navigator.push(context, MaterialPageRoute(builder: (context) => const NoteFormScreen()));
           _refreshNotes();
         },
-        backgroundColor: const Color(0xFF3B82F6),
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add),
       ) : null,
     );
   }

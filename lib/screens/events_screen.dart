@@ -48,7 +48,7 @@ class _EventsScreenState extends State<EventsScreen> {
             if (events.isEmpty) return const Center(child: Text("No upcoming events."));
 
             return ListView.builder(
-              padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 85), // Fix for bottom overlap
+              padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 85), 
               itemCount: events.length,
               itemBuilder: (context, index) {
                 final event = events[index];
@@ -56,9 +56,10 @@ class _EventsScreenState extends State<EventsScreen> {
                 DateTime date = DateTime.parse(event['event_date']);
 
                 return Card(
-                  color: isSelected ? Colors.orange.shade50 : Colors.white,
+                  // Set to null to absorb system theme properly
+                  color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
                   shape: RoundedRectangleBorder(
-                    side: BorderSide(color: isSelected ? Colors.orange : Colors.transparent, width: 2),
+                    side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ListTile(

@@ -21,9 +21,9 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(16.0),
-            color: Colors.white,
             width: double.infinity,
             alignment: Alignment.center,
+            // Removed hardcoded Colors.white
             child: Text(displayDate, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           const Divider(height: 1),
@@ -41,7 +41,7 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
                         DateTime dt = DateTime.parse(item['due_date']);
                         return Card(
                           child: ListTile(
-                            leading: Icon(isCompleted ? Icons.check_circle : Icons.check_box_outline_blank, color: isCompleted ? Colors.green : Colors.blue),
+                            leading: Icon(isCompleted ? Icons.check_circle : Icons.check_box_outline_blank, color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary),
                             title: Text(item['title'], style: TextStyle(fontWeight: FontWeight.bold, decoration: isCompleted ? TextDecoration.lineThrough : null)),
                             subtitle: Text("Task Due at ${DateFormat('h:mm a').format(dt)}"),
                           ),
@@ -49,7 +49,6 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
                       } 
                       else if (item['type'] == 'event') {
                         return Card(
-                          color: Colors.orange.shade50,
                           child: ListTile(
                             leading: const Icon(Icons.event, color: Colors.orange),
                             title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -59,7 +58,6 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
                       }
                       else if (item['type'] == 'class') {
                         return Card(
-                          color: Colors.teal.shade50,
                           child: ListTile(
                             leading: const Icon(Icons.class_, color: Colors.teal),
                             title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),

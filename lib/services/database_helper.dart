@@ -50,7 +50,6 @@ class DatabaseHelper {
     return await db.insert('notes', {'title': title, 'encrypted_content': securedContent, 'attachment_path': attachment?.localPath ?? '', 'attachment_name': attachment?.originalName ?? '', 'created_at': DateTime.now().toIso8601String()});
   }
   
-  // NEW: Update an existing note
   static Future<int> updateNote(int id, String title, String body) async {
     final db = await database;
     String securedContent = EncryptionHelper.encryptText(body);
@@ -69,6 +68,7 @@ class DatabaseHelper {
       return note;
     });
   }
+  
   static Future<int> deleteNotes(List<int> ids) async {
     final db = await database;
     if (ids.isEmpty) return 0;
@@ -80,14 +80,26 @@ class DatabaseHelper {
     final db = await database;
     return await db.insert('tasks', {'title': title, 'due_date': dueDate.toIso8601String(), 'created_at': DateTime.now().toIso8601String(), 'is_completed': 0, 'reminder_minutes': reminderMinutes});
   }
+  
+  static Future<int> updateTaskDetails(int id, String title, DateTime dueDate, int reminderMinutes) async {
+    final db = await database;
+    return await db.update('tasks', {
+      'title': title,
+      'due_date': dueDate.toIso8601String(),
+      'reminder_minutes': reminderMinutes,
+    }, where: 'id = ?', whereArgs: [id]);
+  }
+
   static Future<List<Map<String, dynamic>>> fetchAllTasks() async {
     final db = await database;
     return await db.query('tasks', orderBy: 'due_date ASC');
   }
+  
   static Future<int> updateTaskStatus(int id, int isCompleted) async {
     final db = await database;
     return await db.update('tasks', {'is_completed': isCompleted}, where: 'id = ?', whereArgs: [id]);
   }
+  
   static Future<int> deleteTasks(List<int> ids) async {
     final db = await database;
     if (ids.isEmpty) return 0;
@@ -99,10 +111,12 @@ class DatabaseHelper {
     final db = await database;
     return await db.insert('events', {'title': title, 'description': description, 'event_date': eventDate.toIso8601String(), 'created_at': DateTime.now().toIso8601String()});
   }
+  
   static Future<List<Map<String, dynamic>>> fetchAllEvents() async {
     final db = await database;
     return await db.query('events', orderBy: 'event_date ASC');
   }
+  
   static Future<int> deleteEvents(List<int> ids) async {
     final db = await database;
     if (ids.isEmpty) return 0;
@@ -114,23 +128,28 @@ class DatabaseHelper {
     final db = await database;
     return await db.insert('timetables', {'title': title, 'start_date': startDate.toIso8601String(), 'end_date': endDate.toIso8601String(), 'created_at': DateTime.now().toIso8601String()});
   }
+  
   static Future<List<Map<String, dynamic>>> fetchTimetables() async {
     final db = await database;
     return await db.query('timetables', orderBy: 'start_date ASC');
   }
+  
   static Future<int> deleteTimetables(List<int> ids) async {
     final db = await database;
     if (ids.isEmpty) return 0;
     return await db.delete('timetables', where: 'id IN (${ids.join(',')})');
   }
+  
   static Future<int> saveTimetableEntry(int timetableId, int dayOfWeek, String subject, String startTime, String endTime) async {
     final db = await database;
     return await db.insert('timetable_entries', {'timetable_id': timetableId, 'day_of_week': dayOfWeek, 'subject': subject, 'start_time': startTime, 'end_time': endTime});
   }
+  
   static Future<List<Map<String, dynamic>>> fetchTimetableEntries(int timetableId) async {
     final db = await database;
     return await db.query('timetable_entries', where: 'timetable_id = ?', whereArgs: [timetableId], orderBy: 'start_time ASC');
   }
+  
   static Future<int> deleteTimetableEntry(int id) async {
     final db = await database;
     return await db.delete('timetable_entries', where: 'id = ?', whereArgs: [id]);

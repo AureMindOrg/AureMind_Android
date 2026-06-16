@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
-import 'screens/dashboard_screen.dart'; // Changed this import
+import 'package:provider/provider.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'services/database_helper.dart';
 import 'services/notification_helper.dart';
+import 'services/theme_provider.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseHelper.initDb();
   await NotificationHelper.init(); 
-  runApp(const AureMindApp());
+  
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const AureMindApp(),
+    ),
+  );
 }
 
 class AureMindApp extends StatelessWidget {
@@ -15,20 +24,40 @@ class AureMindApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AureMind Offline',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: const Color(0xFF3B82F6),
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-          elevation: 1,
-        ),
-        useMaterial3: true,
-      ),
-      home: const DashboardScreen(), // Changed the home screen here
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        ColorScheme lightScheme;
+        ColorScheme darkScheme;
+
+        if (lightDynamic != null && darkDynamic != null && themeProvider.useDynamicColor) {
+          // Use Material You (System Colors from Wallpaper)
+          lightScheme = lightDynamic.harmonized();
+          darkScheme = darkDynamic.harmonized();
+        } else {
+          // Use Custom Color Wheel Selection
+          lightScheme = ColorScheme.fromSeed(seedColor: themeProvider.customColor, brightness: Brightness.light);
+          darkScheme = ColorScheme.fromSeed(seedColor: themeProvider.customColor, brightness: Brightness.dark);
+        }
+
+        return MaterialApp(
+          title: 'AureMind',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeProvider.themeMode, 
+          theme: ThemeData(
+            colorScheme: lightScheme,
+            useMaterial3: true,
+            appBarTheme: const AppBarTheme(elevation: 1),
+          ),
+          darkTheme: ThemeData(
+            colorScheme: darkScheme,
+            useMaterial3: true,
+            appBarTheme: const AppBarTheme(elevation: 1),
+          ),
+          home: const DashboardScreen(), 
+        );
+      },
     );
   }
 }

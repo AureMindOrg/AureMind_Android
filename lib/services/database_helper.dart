@@ -18,34 +18,13 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4, // Incremented to add start_date to timetables
+      version: 4, 
       onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, encrypted_content TEXT, attachment_path TEXT, attachment_name TEXT, created_at TEXT
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, due_date TEXT, created_at TEXT, is_completed INTEGER DEFAULT 0, reminder_minutes INTEGER DEFAULT 0
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, event_date TEXT, created_at TEXT
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE timetables (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, start_date TEXT, end_date TEXT, created_at TEXT
-          )
-        ''');
-        await db.execute('''
-          CREATE TABLE timetable_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, timetable_id INTEGER, day_of_week INTEGER, start_time TEXT, end_time TEXT, subject TEXT,
-            FOREIGN KEY (timetable_id) REFERENCES timetables (id) ON DELETE CASCADE
-          )
-        ''');
+        await db.execute('CREATE TABLE notes (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, encrypted_content TEXT, attachment_path TEXT, attachment_name TEXT, created_at TEXT)');
+        await db.execute('CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, due_date TEXT, created_at TEXT, is_completed INTEGER DEFAULT 0, reminder_minutes INTEGER DEFAULT 0)');
+        await db.execute('CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, event_date TEXT, created_at TEXT)');
+        await db.execute('CREATE TABLE timetables (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, start_date TEXT, end_date TEXT, created_at TEXT)');
+        await db.execute('CREATE TABLE timetable_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, timetable_id INTEGER, day_of_week INTEGER, start_time TEXT, end_time TEXT, subject TEXT, FOREIGN KEY (timetable_id) REFERENCES timetables (id) ON DELETE CASCADE)');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -70,6 +49,17 @@ class DatabaseHelper {
     String securedContent = EncryptionHelper.encryptText(body);
     return await db.insert('notes', {'title': title, 'encrypted_content': securedContent, 'attachment_path': attachment?.localPath ?? '', 'attachment_name': attachment?.originalName ?? '', 'created_at': DateTime.now().toIso8601String()});
   }
+  
+  // NEW: Update an existing note
+  static Future<int> updateNote(int id, String title, String body) async {
+    final db = await database;
+    String securedContent = EncryptionHelper.encryptText(body);
+    return await db.update('notes', {
+      'title': title,
+      'encrypted_content': securedContent,
+    }, where: 'id = ?', whereArgs: [id]);
+  }
+
   static Future<List<Map<String, dynamic>>> fetchAllNotes() async {
     final db = await database;
     final maps = await db.query('notes', orderBy: 'created_at DESC');
@@ -131,7 +121,6 @@ class DatabaseHelper {
   static Future<int> deleteTimetables(List<int> ids) async {
     final db = await database;
     if (ids.isEmpty) return 0;
-    // SQLite ON DELETE CASCADE will automatically delete linked entries!
     return await db.delete('timetables', where: 'id IN (${ids.join(',')})');
   }
   static Future<int> saveTimetableEntry(int timetableId, int dayOfWeek, String subject, String startTime, String endTime) async {

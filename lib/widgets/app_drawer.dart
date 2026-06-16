@@ -5,6 +5,7 @@ import '../screens/tasks_screen.dart';
 import '../screens/calendar_screen.dart';
 import '../screens/events_screen.dart';
 import '../screens/timetable_screen.dart';
+import '../screens/settings_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
@@ -24,18 +25,17 @@ class AppDrawer extends StatelessWidget {
     return Drawer(
       child: Column(
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(color: Color(0xFF3B82F6)),
+          DrawerHeader(
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary),
             child: SizedBox(
               width: double.infinity,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Icon(Icons.spa, color: Colors.white, size: 48),
-                  SizedBox(height: 12),
-                  // 👇 Changed to AureMind 👇
-                  Text('AureMind', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)), 
+                  Icon(Icons.spa, color: Theme.of(context).colorScheme.onPrimary, size: 48),
+                  const SizedBox(height: 12),
+                  Text('AureMind', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 24, fontWeight: FontWeight.bold)), 
                 ],
               ),
             ),
@@ -76,6 +76,13 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Time Table Manager'),
             selected: currentRoute == 'Timetable',
             onTap: () => _navigateTo(context, const TimetableScreen(), 'Timetable'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            selected: currentRoute == 'Settings',
+            onTap: () => _navigateTo(context, const SettingsScreen(), 'Settings'),
           ),
         ],
       ),

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'screens/main_screen.dart';
+import 'screens/dashboard_screen.dart'; // Changed this import
 import 'services/database_helper.dart';
 import 'services/notification_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseHelper.initDb();
-  await NotificationHelper.init(); // Initialize notifications
+  await NotificationHelper.init(); 
   runApp(const AureMindApp());
-} // <--- This was missing!
+}
 
 class AureMindApp extends StatelessWidget {
   const AureMindApp({super.key});
@@ -28,7 +28,7 @@ class AureMindApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const MainScreen(),
+      home: const DashboardScreen(), // Changed the home screen here
     );
   }
 }

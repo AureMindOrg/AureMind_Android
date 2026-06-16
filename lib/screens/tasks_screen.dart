@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../services/notification_helper.dart';
+import '../widgets/app_drawer.dart';
 import 'task_form_screen.dart';
 
 class TasksScreen extends StatefulWidget {
@@ -14,14 +15,12 @@ class _TasksScreenState extends State<TasksScreen> {
   Set<int> _selectedIds = {};
 
   void _refreshTasks() {
-    setState(() {
-      _selectedIds.clear();
-    });
+    setState(() { _selectedIds.clear(); });
   }
 
   void _deleteSelected() async {
     for (int id in _selectedIds) {
-      await NotificationHelper.cancelNotification(id); // Cancel alarms for deleted tasks
+      await NotificationHelper.cancelNotification(id); 
     }
     await DatabaseHelper.deleteTasks(_selectedIds.toList());
     _refreshTasks();
@@ -40,7 +39,7 @@ class _TasksScreenState extends State<TasksScreen> {
   void _toggleTaskCompletion(Map<String, dynamic> task, bool? isCompleted) async {
     await DatabaseHelper.updateTaskStatus(task['id'], isCompleted == true ? 1 : 0);
     if (isCompleted == true) {
-      await NotificationHelper.cancelNotification(task['id']); // Cancel alarm if done early
+      await NotificationHelper.cancelNotification(task['id']); 
     }
     _refreshTasks();
   }
@@ -86,6 +85,7 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AppDrawer(currentRoute: 'Tasks'),
       appBar: AppBar(
         title: Text(_selectedIds.isEmpty ? 'Tasks' : '${_selectedIds.length} Selected', 
           style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -94,36 +94,39 @@ class _TasksScreenState extends State<TasksScreen> {
             IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: DatabaseHelper.fetchAllTasks(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          
-          final tasks = snapshot.data ?? [];
-          final pendingTasks = tasks.where((t) => t['is_completed'] == 0).toList();
-          final completedTasks = tasks.where((t) => t['is_completed'] == 1).toList();
+      body: SafeArea(
+        bottom: true,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: DatabaseHelper.fetchAllTasks(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+            
+            final tasks = snapshot.data ?? [];
+            final pendingTasks = tasks.where((t) => t['is_completed'] == 0).toList();
+            final completedTasks = tasks.where((t) => t['is_completed'] == 1).toList();
 
-          if (tasks.isEmpty) {
-            return const Center(child: Text("No tasks found. Create one to get started!"));
-          }
+            if (tasks.isEmpty) {
+              return const Center(child: Text("No tasks found. Create one to get started! 🥳"));
+            }
 
-          return ListView(
-            padding: const EdgeInsets.only(top: 8, bottom: 80),
-            children: [
-              ...pendingTasks.map((t) => _buildTaskTile(t, false)),
-              
-              if (completedTasks.isNotEmpty)
-                Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    title: Text("Completed (${completedTasks.length})", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                    initiallyExpanded: false,
-                    children: completedTasks.map((t) => _buildTaskTile(t, true)).toList(),
-                  ),
-                )
-            ],
-          );
-        },
+            return ListView(
+              padding: const EdgeInsets.only(top: 8, bottom: 85), // Fix for bottom overlap
+              children: [
+                ...pendingTasks.map((t) => _buildTaskTile(t, false)),
+                
+                if (completedTasks.isNotEmpty)
+                  Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      title: Text("Completed (${completedTasks.length})", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                      initiallyExpanded: false,
+                      children: completedTasks.map((t) => _buildTaskTile(t, true)).toList(),
+                    ),
+                  )
+              ],
+            );
+          },
+        ),
       ),
       floatingActionButton: _selectedIds.isEmpty ? FloatingActionButton(
         onPressed: () async {

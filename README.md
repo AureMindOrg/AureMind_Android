@@ -29,22 +29,16 @@ A secure, offline-first notes and task management application built with Flutter
 1. Clone the repository:
    ```bash
    git clone [https://github.com/YOUR_USERNAME/auremind_offline.git](https://github.com/YOUR_USERNAME/auremind_offline.git)
-   cd auremind_offline
-
-```
+   cd auremind_offline```
 
 2. Install dependencies:
    ```bash
-flutter pub get
-
-```
+flutter pub get```
 
 
 3. Build the Release APK (Windows):
    ```bash
-flutter build apk --release
-
-```
+flutter build apk --release```
 
 
 4. The generated APK will be located at:
@@ -53,7 +47,3 @@ flutter build apk --release
 ##  Privacy & Permissions
 
 This application requires permission to post notifications and set exact alarms to ensure task reminders trigger reliably. It does not request internet access, ensuring your data remains completely isolated and secure on your device.
-
-```
-
-```

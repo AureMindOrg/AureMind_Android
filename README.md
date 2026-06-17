@@ -34,14 +34,14 @@ A secure, offline-first notes and task management application built with Flutter
 ```
 
 2. Install dependencies:
-```bash
+   ```bash
 flutter pub get
 
 ```
 
 
 3. Build the Release APK (Windows):
-```bash
+   ```bash
 flutter build apk --release
 
 ```

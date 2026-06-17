@@ -17,8 +17,9 @@ dependencies:
   path_provider: ^2.1.3
   encrypt: ^5.0.3
   
-  # Attachments
-  file_picker: ^8.0.3
+  # Attachments & Sharing
+  file_picker: ^8.1.2
+  share_plus: ^10.0.0
   
   # Notifications & Time
   flutter_local_notifications: ^17.1.2
@@ -33,6 +34,11 @@ dependencies:
   provider: ^6.1.2
   dynamic_color: ^1.6.9
   flutter_colorpicker: ^1.1.0
+
+  # Markdown & PDF Export
+  flutter_markdown: ^0.7.2
+  pdf: ^3.11.0
+  printing: ^5.12.0
 
 dev_dependencies:
   flutter_test:

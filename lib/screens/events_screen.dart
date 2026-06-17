@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/directory_drawer.dart';
 import 'event_form_screen.dart';
 
 class EventsScreen extends StatefulWidget {
-  const EventsScreen({super.key});
+  final int? folderId;
+  final String? folderName;
+  const EventsScreen({super.key, this.folderId, this.folderName});
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
@@ -14,38 +17,38 @@ class _EventsScreenState extends State<EventsScreen> {
   Set<int> _selectedIds = {};
 
   void _refreshEvents() => setState(() { _selectedIds.clear(); });
+  void _deleteSelected() async { await DatabaseHelper.deleteEvents(_selectedIds.toList()); _refreshEvents(); }
+  void _toggleSelection(int id) { setState(() { _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id); }); }
 
-  void _deleteSelected() async {
-    await DatabaseHelper.deleteEvents(_selectedIds.toList());
-    _refreshEvents();
-  }
-
-  void _toggleSelection(int id) {
-    setState(() {
-      _selectedIds.contains(id) ? _selectedIds.remove(id) : _selectedIds.add(id);
-    });
+  void _editEvent(Map<String, dynamic> event) async {
+    final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => EventFormScreen(existingEvent: event)));
+    if (result == true) _refreshEvents();
   }
 
   @override
   Widget build(BuildContext context) {
+    String displayTitle = widget.folderName != null ? '📁 ${widget.folderName}' : 'Events';
+    if (_selectedIds.isNotEmpty) displayTitle = '${_selectedIds.length} Selected';
+
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: 'Events'),
+      drawer: DirectoryDrawer(type: 'event', currentFolderId: widget.folderId), // Left
+      endDrawer: const AppDrawer(currentRoute: 'Events'), // Right
       appBar: AppBar(
-        title: Text(_selectedIds.isEmpty ? 'Events' : '${_selectedIds.length} Selected', 
-          style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          if (_selectedIds.isNotEmpty)
-            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)
+          if (_selectedIds.isNotEmpty) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected),
+          // 👇 Manually adding the Right Menu button back! 👇
+          Builder(builder: (context) => IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openEndDrawer())),
         ],
       ),
       body: SafeArea(
         bottom: true,
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: DatabaseHelper.fetchAllEvents(),
+          future: DatabaseHelper.fetchAllEvents(folderId: widget.folderId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
             final events = snapshot.data ?? [];
-            if (events.isEmpty) return const Center(child: Text("No upcoming events."));
+            if (events.isEmpty) return const Center(child: Text("No upcoming events in this folder."));
 
             return ListView.builder(
               padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 85), 
@@ -56,17 +59,11 @@ class _EventsScreenState extends State<EventsScreen> {
                 DateTime date = DateTime.parse(event['event_date']);
 
                 return Card(
-                  // Set to null to absorb system theme properly
                   color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  shape: RoundedRectangleBorder(side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2), borderRadius: BorderRadius.circular(8)),
                   child: ListTile(
                     onLongPress: () => _toggleSelection(event['id']),
-                    onTap: () {
-                      if (_selectedIds.isNotEmpty) _toggleSelection(event['id']);
-                    },
+                    onTap: () { if (_selectedIds.isNotEmpty) { _toggleSelection(event['id']); } else { _editEvent(event); } },
                     leading: const Icon(Icons.event, color: Colors.orange),
                     title: Text(event['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text("${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}\n${event['description']}"),
@@ -80,8 +77,8 @@ class _EventsScreenState extends State<EventsScreen> {
       ),
       floatingActionButton: _selectedIds.isEmpty ? FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => const EventFormScreen()));
-          _refreshEvents();
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => EventFormScreen(folderId: widget.folderId)));
+          if (result == true) _refreshEvents();
         },
         backgroundColor: Colors.orange,
         child: const Icon(Icons.add, color: Colors.white),

@@ -14,18 +14,19 @@ class SettingsScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Pick App Color'),
         content: SingleChildScrollView(
-          child: BlockPicker(
+          child: ColorPicker(
             pickerColor: themeProvider.customColor,
             onColorChanged: (color) => tempColor = color,
+            pickerAreaHeightPercent: 0.8,
+            enableAlpha: false,
+            displayThumbColor: true,
+            paletteType: PaletteType.hsvWithHue, // Smooth wheel
           ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            onPressed: () {
-              themeProvider.setCustomColor(tempColor);
-              Navigator.pop(context);
-            },
+            onPressed: () { themeProvider.setCustomColor(tempColor); Navigator.pop(context); },
             child: const Text('Save'),
           ),
         ],
@@ -36,9 +37,8 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: 'Settings'),
+      endDrawer: const AppDrawer(currentRoute: 'Settings'),
       appBar: AppBar(title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold))),
       body: SafeArea(
         bottom: true,
@@ -57,9 +57,7 @@ class SettingsScreen extends StatelessWidget {
                     trailing: DropdownButton<ThemeMode>(
                       value: themeProvider.themeMode,
                       underline: const SizedBox(),
-                      onChanged: (ThemeMode? newMode) {
-                        if (newMode != null) themeProvider.setThemeMode(newMode);
-                      },
+                      onChanged: (ThemeMode? newMode) { if (newMode != null) themeProvider.setThemeMode(newMode); },
                       items: const [
                         DropdownMenuItem(value: ThemeMode.system, child: Text('System Default')),
                         DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),

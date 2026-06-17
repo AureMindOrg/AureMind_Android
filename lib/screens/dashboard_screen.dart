@@ -13,7 +13,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: 'Dashboard'),
+      endDrawer: const AppDrawer(currentRoute: 'Dashboard'), // Menu moved to right!
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
@@ -30,7 +30,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const Text("Recent Notes", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 10),
               FutureBuilder<List<Map<String, dynamic>>>(
-                future: DatabaseHelper.fetchAllNotes(),
+                // 👇 FIXED: Changed fetchAllNotes() to fetchNotes() 👇
+                future: DatabaseHelper.fetchNotes(), 
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const CircularProgressIndicator();
                   final notes = snapshot.data!.take(3).toList();

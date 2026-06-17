@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../services/notification_helper.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/directory_drawer.dart';
 import 'task_form_screen.dart';
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  final int? folderId;
+  final String? folderName;
+  const TasksScreen({super.key, this.folderId, this.folderName});
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -44,7 +47,6 @@ class _TasksScreenState extends State<TasksScreen> {
 
     return Card(
       elevation: 2,
-      // By using null, the Card perfectly absorbs Dark Mode / Light Mode colors automatically
       color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       shape: RoundedRectangleBorder(
@@ -57,17 +59,11 @@ class _TasksScreenState extends State<TasksScreen> {
           if (_selectedIds.isNotEmpty) {
             _toggleSelection(task['id']);
           } else {
-            _editTask(task); // <-- OPENS EDITOR
+            _editTask(task);
           }
         },
-        leading: Checkbox(
-          value: task['is_completed'] == 1,
-          onChanged: (val) { if (_selectedIds.isEmpty) _toggleTaskCompletion(task, val); },
-        ),
-        title: Text(
-          task['title'], 
-          style: TextStyle(fontWeight: FontWeight.bold, decoration: isCompletedTask ? TextDecoration.lineThrough : null, color: isCompletedTask ? Colors.grey : null)
-        ),
+        leading: Checkbox(value: task['is_completed'] == 1, onChanged: (val) { if (_selectedIds.isEmpty) _toggleTaskCompletion(task, val); }),
+        title: Text(task['title'], style: TextStyle(fontWeight: FontWeight.bold, decoration: isCompletedTask ? TextDecoration.lineThrough : null, color: isCompletedTask ? Colors.grey : null)),
         subtitle: Text("Due: $formattedDate", style: const TextStyle(color: Colors.blueGrey)),
       ),
     );
@@ -75,24 +71,31 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String displayTitle = widget.folderName != null ? '📁 ${widget.folderName}' : 'Tasks';
+    if (_selectedIds.isNotEmpty) displayTitle = '${_selectedIds.length} Selected';
+
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: 'Tasks'),
+      drawer: DirectoryDrawer(type: 'task', currentFolderId: widget.folderId), // Left
+      endDrawer: const AppDrawer(currentRoute: 'Tasks'), // Right
       appBar: AppBar(
-        title: Text(_selectedIds.isEmpty ? 'Tasks' : '${_selectedIds.length} Selected', style: const TextStyle(fontWeight: FontWeight.bold)),
-        actions: [if (_selectedIds.isNotEmpty) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)],
+        title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          if (_selectedIds.isNotEmpty) IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected),
+          // 👇 Manually adding the Right Menu button back! 👇
+          Builder(builder: (context) => IconButton(icon: const Icon(Icons.menu), onPressed: () => Scaffold.of(context).openEndDrawer())),
+        ],
       ),
       body: SafeArea(
         bottom: true,
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: DatabaseHelper.fetchAllTasks(),
+          future: DatabaseHelper.fetchAllTasks(folderId: widget.folderId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            
             final tasks = snapshot.data ?? [];
             final pendingTasks = tasks.where((t) => t['is_completed'] == 0).toList();
             final completedTasks = tasks.where((t) => t['is_completed'] == 1).toList();
 
-            if (tasks.isEmpty) return const Center(child: Text("No tasks found."));
+            if (tasks.isEmpty) return const Center(child: Text("No tasks found in this folder."));
 
             return ListView(
               padding: const EdgeInsets.only(top: 8, bottom: 85),
@@ -113,11 +116,11 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
       floatingActionButton: _selectedIds.isEmpty ? FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const TaskFormScreen()));
+          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => TaskFormScreen(folderId: widget.folderId)));
           if (result == true) _refreshTasks(); 
         },
         child: const Icon(Icons.add),
       ) : null,
     );
   }
-} 
+}

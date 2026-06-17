@@ -23,3 +23,8 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+allprojects {
+    extra.set("compileSdkVersion", 36)
+    extra.set("compileSdk", 36)
+}

@@ -23,7 +23,6 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
             padding: const EdgeInsets.all(16.0),
             width: double.infinity,
             alignment: Alignment.center,
-            // Removed hardcoded Colors.white
             child: Text(displayDate, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ),
           const Divider(height: 1),
@@ -39,18 +38,27 @@ class _DateDetailScreenState extends State<DateDetailScreen> {
                       if (item['type'] == 'task') {
                         bool isCompleted = item['is_completed'] == 1;
                         DateTime dt = DateTime.parse(item['due_date']);
+                        
+                        // 👇 Uses Custom Folder Color!
+                        Color iconColor = isCompleted 
+                            ? Colors.green 
+                            : (item['folder_color'] != null ? Color(item['folder_color']) : Theme.of(context).colorScheme.primary);
+                            
                         return Card(
                           child: ListTile(
-                            leading: Icon(isCompleted ? Icons.check_circle : Icons.check_box_outline_blank, color: isCompleted ? Colors.green : Theme.of(context).colorScheme.primary),
+                            leading: Icon(isCompleted ? Icons.check_circle : Icons.check_box_outline_blank, color: iconColor),
                             title: Text(item['title'], style: TextStyle(fontWeight: FontWeight.bold, decoration: isCompleted ? TextDecoration.lineThrough : null)),
                             subtitle: Text("Task Due at ${DateFormat('h:mm a').format(dt)}"),
                           ),
                         );
                       } 
                       else if (item['type'] == 'event') {
+                        // 👇 Uses Custom Folder Color!
+                        Color iconColor = item['folder_color'] != null ? Color(item['folder_color']) : Colors.orange;
+                        
                         return Card(
                           child: ListTile(
-                            leading: const Icon(Icons.event, color: Colors.orange),
+                            leading: Icon(Icons.event, color: iconColor),
                             title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text(item['description'] ?? 'Event'),
                           ),

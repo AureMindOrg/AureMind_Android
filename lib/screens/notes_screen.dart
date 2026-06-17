@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import '../services/database_helper.dart';
 import '../widgets/app_drawer.dart';
+import '../widgets/directory_drawer.dart';
 import 'note_form_screen.dart';
 import 'note_detail_screen.dart';
 
 class NotesScreen extends StatefulWidget {
-  const NotesScreen({super.key});
+  final int? folderId;
+  final String? folderName;
+
+  const NotesScreen({super.key, this.folderId, this.folderName});
 
   @override
   State<NotesScreen> createState() => _NotesScreenState();
@@ -31,33 +35,46 @@ class _NotesScreenState extends State<NotesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String displayTitle = widget.folderName != null ? '📁 ${widget.folderName}' : 'My Notes';
+    if (_selectedIds.isNotEmpty) displayTitle = '${_selectedIds.length} Selected';
+
     return Scaffold(
-      drawer: const AppDrawer(currentRoute: 'Notes'),
+      // 👇 Left Sidebar: VS Code Directory 👇
+      drawer: DirectoryDrawer(type: 'note', currentFolderId: widget.folderId),
+      // 👇 Right Sidebar: Main Menu 👇
+      endDrawer: const AppDrawer(currentRoute: 'Notes'), 
+      
       appBar: AppBar(
-        title: Text(_selectedIds.isEmpty ? 'My Notes' : '${_selectedIds.length} Selected', 
-          style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(displayTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           if (_selectedIds.isNotEmpty)
-            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected)
+            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: _deleteSelected),
+          // Add a hamburger menu button to the right side manually since we moved the AppDrawer
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () => Scaffold.of(context).openEndDrawer(),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
         bottom: true,
         child: FutureBuilder<List<Map<String, dynamic>>>(
-          future: DatabaseHelper.fetchAllNotes(),
+          // 👇 Fetches ONLY notes inside the selected folder 👇
+          future: DatabaseHelper.fetchNotes(folderId: widget.folderId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-            if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("No notes found. Create one! 📝"));
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return Center(child: Text(widget.folderId == null ? "No notes found. Create one!" : "This folder is empty."));
+            }
 
             final notes = snapshot.data!;
 
             return GridView.builder(
               padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: 85),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 0.85,
+                crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.85,
               ),
               itemCount: notes.length,
               itemBuilder: (context, index) {
@@ -77,7 +94,7 @@ class _NotesScreenState extends State<NotesScreen> {
                   },
                   child: Card(
                     elevation: 3,
-                    color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null, // Fix applied here
+                    color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
@@ -90,14 +107,7 @@ class _NotesScreenState extends State<NotesScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  note['title'],
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                              Expanded(child: Text(note['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis)),
                               if (isSelected) Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20)
                             ],
                           ),
@@ -105,12 +115,7 @@ class _NotesScreenState extends State<NotesScreen> {
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(bottom: 4.0),
-                              child: Text(
-                                note['decrypted_content'] ?? '',
-                                style: const TextStyle(fontSize: 14, height: 1.3),
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              child: Text(note['decrypted_content'] ?? '', style: const TextStyle(fontSize: 14, height: 1.3), maxLines: 5, overflow: TextOverflow.ellipsis),
                             ),
                           ),
                           if (hasAttachment) ...[
@@ -135,7 +140,8 @@ class _NotesScreenState extends State<NotesScreen> {
       ),
       floatingActionButton: _selectedIds.isEmpty ? FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => const NoteFormScreen()));
+          // When creating a note, pass the current folder ID so it saves inside this specific folder!
+          await Navigator.push(context, MaterialPageRoute(builder: (context) => NoteFormScreen(folderId: widget.folderId)));
           _refreshNotes();
         },
         child: const Icon(Icons.add),

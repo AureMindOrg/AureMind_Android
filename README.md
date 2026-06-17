@@ -29,17 +29,21 @@ A secure, offline-first notes and task management application built with Flutter
 1. Clone the repository:
    ```bash
    git clone [https://github.com/YOUR_USERNAME/auremind_offline.git](https://github.com/YOUR_USERNAME/auremind_offline.git)
-   cd auremind_offline```
+   cd auremind_offline
+
+```
 
 2. Install dependencies:
    ```bash
-flutter pub get```
+flutter pub get
 
+```
 
 3. Build the Release APK (Windows):
    ```bash
-flutter build apk --release```
+flutter build apk --release
 
+```
 
 4. The generated APK will be located at:
 `build/app/outputs/flutter-apk/app-release.apk`
